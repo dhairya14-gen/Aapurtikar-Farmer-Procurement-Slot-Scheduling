@@ -6,9 +6,11 @@ import {
   type Loadable,
 } from './api'
 import { benchmark } from './researchData'
+import { INDIA_STATES_AND_UTS, INDIA_CENTRES, type CentreRecord } from './nationalDirectory'
 
 type Page = 'home' | 'farmer' | 'slots' | 'staff' | 'analytics'
-type Crop = 'Paddy (Dhan)' | 'Wheat'
+type Crop = 'Paddy' | 'Wheat' | 'Mustard' | 'Pulses' | 'Other'
+type DemoBooking = { reference: string; centreId: string; state: string; district: string; crop: Crop; date: string; slot: string }
 
 const pages: { id: Page; label: string; number: string }[] = [
   { id: 'home', label: 'Overview', number: '01' },
@@ -26,9 +28,33 @@ function pageFromHash(): Page {
 function App() {
   const [page, setPage] = useState<Page>(pageFromHash)
   const [health, setHealth] = useState<Loadable<ApiHealth>>({ state: 'loading' })
-  const [crop, setCrop] = useState<Crop>('Paddy (Dhan)')
+  const [selectedState, setSelectedState] = useState('Uttar Pradesh')
+  const [selectedDistrict, setSelectedDistrict] = useState('Siddharth Nagar')
+  const [selectedCentreId, setSelectedCentreId] = useState('up-bijaura-pcf')
+  const [crop, setCrop] = useState<Crop>('Paddy')
   const [visitDate, setVisitDate] = useState('')
+  const [demoSlot, setDemoSlot] = useState('')
+  const [demoBooking, setDemoBooking] = useState<DemoBooking | null>(null)
   const [analyticsTab, setAnalyticsTab] = useState<'simulation' | 'operational'>('simulation')
+
+  const selectedCentre = INDIA_CENTRES.find((centre) => centre.id === selectedCentreId)
+  const districtsForState = Array.from(new Set(INDIA_CENTRES.filter((centre) => centre.state === selectedState).map((centre) => centre.district))).sort()
+  const centresForSelection = INDIA_CENTRES.filter((centre) => centre.state === selectedState && centre.district === selectedDistrict)
+
+  const confirmDemoBooking = (slot: string) => {
+    if (!selectedCentre || !visitDate) return
+    const reference = `AAP-DEMO-${String(Date.now()).slice(-7)}`
+    setDemoSlot(slot)
+    setDemoBooking({
+      reference,
+      centreId: selectedCentre.id,
+      state: selectedCentre.state,
+      district: selectedCentre.district,
+      crop,
+      date: visitDate,
+      slot,
+    })
+  }
 
   useEffect(() => {
     const controller = new AbortController()
@@ -72,15 +98,15 @@ function App() {
 
       <main className="page-shell">
         <div className="prototype-banner">
-          <div><span className="banner-pulse" /> ACADEMIC PROTOTYPE <b>·</b> SMART INDIA HACKATHON 2026 <b>·</b> KAPURTHALA, PUNJAB (PROPOSED)</div>
-          <div className="banner-gates"><span>BOOKING DISABLED</span><span>NO LIVE QUEUE</span></div>
+          <div><span className="banner-pulse" /> ACADEMIC PROTOTYPE <b>·</b> INDIA-WIDE DIRECTORY PILOT <b>·</b> SOURCE-TRACKED CENTRE LISTINGS</div>
+          <div className="banner-gates"><span>REAL BOOKINGS DISABLED</span><span>DEMO MODE LOCAL ONLY</span></div>
         </div>
         <ApiStatusBar health={health} />
 
         {page === 'home' && <Home navigate={navigate} />}
-        {page === 'farmer' && <FarmerPortal navigate={navigate} crop={crop} setCrop={setCrop} visitDate={visitDate} setVisitDate={setVisitDate} />}
-        {page === 'slots' && <SlotPreview crop={crop} visitDate={visitDate} />}
-        {page === 'staff' && <CentreDesk navigate={navigate} />}
+        {page === 'farmer' && <FarmerPortal navigate={navigate} selectedState={selectedState} setSelectedState={setSelectedState} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} selectedCentreId={selectedCentreId} setSelectedCentreId={setSelectedCentreId} crop={crop} setCrop={setCrop} visitDate={visitDate} setVisitDate={setVisitDate} selectedCentre={selectedCentre} districtsForState={districtsForState} centresForSelection={centresForSelection} />}
+        {page === 'slots' && <SlotPreview selectedState={selectedState} selectedDistrict={selectedDistrict} selectedCentre={selectedCentre} crop={crop} visitDate={visitDate} demoSlot={demoSlot} setDemoSlot={(slot) => { setDemoSlot(slot); setDemoBooking(null) }} demoBooking={demoBooking} onConfirm={confirmDemoBooking} />}
+        {page === 'staff' && <CentreDesk navigate={navigate} demoBooking={demoBooking} />}
         {page === 'analytics' && <Analytics activeTab={analyticsTab} setActiveTab={setAnalyticsTab} />}
       </main>
 
@@ -176,84 +202,237 @@ function WorkflowStep({ number, title, detail }: { number: string; title: string
   return <div className="workflow-step"><span>{number}</span><strong>{title}</strong><small>{detail}</small></div>
 }
 
-function FarmerPortal({ navigate, crop, setCrop, visitDate, setVisitDate }: { navigate: (page: Page) => void; crop: Crop; setCrop: (crop: Crop) => void; visitDate: string; setVisitDate: (date: string) => void }) {
+function FarmerPortal({
+  navigate, selectedState, setSelectedState, selectedDistrict, setSelectedDistrict,
+  selectedCentreId, setSelectedCentreId, crop, setCrop, visitDate, setVisitDate,
+  selectedCentre, districtsForState, centresForSelection,
+}: {
+  navigate: (page: Page) => void
+  selectedState: string
+  setSelectedState: (value: string) => void
+  selectedDistrict: string
+  setSelectedDistrict: (value: string) => void
+  selectedCentreId: string
+  setSelectedCentreId: (value: string) => void
+  crop: Crop
+  setCrop: (value: Crop) => void
+  visitDate: string
+  setVisitDate: (value: string) => void
+  selectedCentre: CentreRecord | undefined
+  districtsForState: string[]
+  centresForSelection: CentreRecord[]
+}) {
   const [language, setLanguage] = useState<'English' | 'हिन्दी'>('English')
+  const statusText = selectedCentre?.recordStatus === 'official-tender-reference'
+    ? 'Official tender reference'
+    : selectedCentre?.recordStatus === 'official-directory-listing'
+      ? 'Official directory listing · historical'
+      : selectedCentre?.recordStatus === 'portal-listing'
+        ? 'Government portal listing · verify season'
+        : 'Not listed'
   return (
     <div className="page-content">
-      <SectionHeading eyebrow="FARMER PORTAL · DEMONSTRATION VIEW" title="Plan a procurement visit" intro="A guided preview of the farmer journey. This prototype does not create an account, store personal details or reserve an arrival slot." action={<span className="view-tag">MOBILE-FRIENDLY VIEW</span>} />
+      <SectionHeading
+        eyebrow="FARMER PORTAL · INDIA-WIDE DEMONSTRATION"
+        title="Plan a procurement visit"
+        intro="Select a state, district and source-listed centre. The selection carries into the slot preview. Any reservation created here is a local demo only, not a government booking."
+        action={<span className="view-tag">NATIONAL WORKFLOW</span>}
+      />
       <div className="farmer-layout">
         <section className="phone-shell">
-          <div className="phone-top"><span className="phone-camera" /><span> Aapurtikar <b>●</b></span><span>10:24</span></div>
+          <div className="phone-top"><span className="phone-camera" /><span> Aapurtikar <b>●</b></span><span>DEMO</span></div>
           <div className="phone-content">
             <div className="phone-brand"><span className="phone-mark">अ</span><span><strong>Aapurtikar</strong><small>Farmer procurement portal</small></span><button className="language-toggle" onClick={() => setLanguage(language === 'English' ? 'हिन्दी' : 'English')}>{language === 'English' ? 'हिंदी' : 'EN'}</button></div>
-            <div className="phone-hero"><span className="phone-hero-icon">🌾</span><p className="eyebrow">WELCOME FARMER</p><h2>{language === 'English' ? 'Your visit, better planned.' : 'आपकी यात्रा, बेहतर योजना।'}</h2><p>{language === 'English' ? 'Check the proposed centre and project crop scope before planning a visit.' : 'यात्रा की योजना से पहले प्रस्तावित केंद्र और फसल की जानकारी देखें।'}</p></div>
-            <div className="phone-field-group"><label htmlFor="centre-choice">Proposed procurement centre</label><div className="phone-select static-select"><span>⌖</span><div><strong>CMS Kapurthala · New Dana Mandi</strong><small>Kapurthala, Punjab · Unverified</small></div></div></div>
-            <div className="phone-field-group"><label htmlFor="crop-choice">Select crop (project scope)</label><select id="crop-choice" value={crop} onChange={(event) => setCrop(event.target.value as Crop)}><option>Paddy (Dhan)</option><option>Wheat</option></select><small className="field-hint">Centre-specific crop eligibility has not been authorized.</small></div>
-            <div className="phone-field-group"><label htmlFor="visit-date">Preferred visit date (preview only)</label><input id="visit-date" type="date" value={visitDate} onChange={(event) => setVisitDate(event.target.value)} /></div>
-            <div className="phone-status"><span className="status-icon">i</span><div><strong>Booking is not open</strong><small>Centre participation and operating capacity are still unverified.</small></div></div>
-            <button className="button button-primary full-width" onClick={() => navigate('slots')}>Continue to slot preview <span>→</span></button>
-            <p className="phone-legal">Academic prototype · No reservation will be created</p>
+            <div className="phone-hero"><span className="phone-hero-icon">🌾</span><p className="eyebrow">WELCOME FARMER</p><h2>{language === 'English' ? 'Your visit, better planned.' : 'आपकी यात्रा, बेहतर योजना।'}</h2><p>{language === 'English' ? 'Choose a location and preview a procurement visit.' : 'स्थान चुनें और खरीद यात्रा का पूर्वावलोकन करें।'}</p></div>
+
+            <div className="directory-form">
+              <div className="directory-field">
+                <label htmlFor="india-state">1. State / Union Territory</label>
+                <select id="india-state" value={selectedState} onChange={(event) => {
+                  const nextState = event.target.value
+                  const firstCentre = INDIA_CENTRES.find((centre) => centre.state === nextState)
+                  setSelectedState(nextState)
+                  setSelectedDistrict(firstCentre?.district ?? '')
+                  setSelectedCentreId(firstCentre?.id ?? '')
+                }}>
+                  {INDIA_STATES_AND_UTS.map((state) => <option key={state} value={state}>{state}</option>)}
+                </select>
+              </div>
+              <div className="directory-field">
+                <label htmlFor="india-district">2. District</label>
+                <select id="india-district" value={selectedDistrict} disabled={districtsForState.length === 0} onChange={(event) => {
+                  const nextDistrict = event.target.value
+                  const firstCentre = centresForSelection.find((centre) => centre.district === nextDistrict) ?? INDIA_CENTRES.find((centre) => centre.state === selectedState && centre.district === nextDistrict)
+                  setSelectedDistrict(nextDistrict)
+                  setSelectedCentreId(firstCentre?.id ?? '')
+                }}>
+                  {districtsForState.length === 0 ? <option value="">No sourced districts loaded</option> : districtsForState.map((district) => <option key={district} value={district}>{district}</option>)}
+                </select>
+              </div>
+              <div className="directory-field">
+                <label htmlFor="india-centre">3. Mandi / procurement centre</label>
+                <select id="india-centre" value={selectedCentreId} disabled={centresForSelection.length === 0} onChange={(event) => setSelectedCentreId(event.target.value)}>
+                  {centresForSelection.length === 0 ? <option value="">No source-backed centre loaded for this district</option> : centresForSelection.map((centre) => <option key={centre.id} value={centre.id}>{centre.name}</option>)}
+                </select>
+              </div>
+              <div className="directory-field">
+                <label htmlFor="crop-choice">4. Commodity (demo selection)</label>
+                <select id="crop-choice" value={crop} onChange={(event) => setCrop(event.target.value as Crop)}>
+                  <option value="Paddy">Paddy</option>
+                  <option value="Wheat">Wheat</option>
+                  <option value="Mustard">Mustard</option>
+                  <option value="Pulses">Pulses</option>
+                  <option value="Other">Other / not specified</option>
+                </select>
+                <small>Commodity eligibility must be confirmed with the relevant state agency for the active season.</small>
+              </div>
+              <div className="directory-field">
+                <label htmlFor="visit-date">5. Preferred visit date</label>
+                <input id="visit-date" type="date" value={visitDate} onChange={(event) => setVisitDate(event.target.value)} />
+                <small>Date is a demo input; no centre calendar is connected.</small>
+              </div>
+            </div>
+
+            {selectedCentre ? (
+              <div className="centre-source-card">
+                <div className="centre-source-heading"><strong>{selectedCentre.name}</strong><span className={selectedCentre.recordStatus === 'official-tender-reference' ? 'source-pill source-current' : 'source-pill'}>{statusText}</span></div>
+                <p>{selectedCentre.district}, {selectedCentre.state}{selectedCentre.pincode ? ` · PIN ${selectedCentre.pincode}` : ''}</p>
+                {selectedCentre.address && <p>{selectedCentre.address}</p>}
+                <p className="centre-agency">Agency: {selectedCentre.agency ?? 'Not stated in source'}</p>
+                {selectedCentre.commodity && <p className="centre-agency">Source commodity/season: {selectedCentre.commodity}</p>}
+                <p className="source-caveat">{selectedCentre.verificationNote}</p>
+                <a href={selectedCentre.sourceUrl} target="_blank" rel="noreferrer">View source record ↗</a>
+              </div>
+            ) : (
+              <div className="directory-empty"><strong>No source-backed centre record loaded for {selectedState} yet.</strong><p>We are expanding coverage state by state. We will not substitute an unverified mandi or invent an address, agency or crop eligibility.</p></div>
+            )}
+
+            <div className="demo-notice"><strong>Demo mode only</strong><p>Choose a centre and date to continue. The next screen will show selectable illustrative time windows and a simulated confirmation. Nothing is sent to a government system.</p></div>
+            <button className="button button-primary full-width" disabled={!selectedCentre || !visitDate} onClick={() => navigate('slots')}>Continue to slot preview <span>→</span></button>
+            <p className="phone-legal">Real procurement bookings and live queue estimates remain disabled</p>
           </div>
           <div className="phone-home-indicator" />
         </section>
         <div className="farmer-explainer">
-          <div className="explainer-card"><span className="explainer-number">01</span><div><h3>Find a proposed centre</h3><p>The current academic candidate is CMS Kapurthala, New Dana Mandi. It is not confirmed as a participating procurement centre.</p><span className="status-pill status-amber">Verification pending</span></div></div>
-          <div className="explainer-card"><span className="explainer-number">02</span><div><h3>Check project crop scope</h3><p>Paddy and wheat are the crops covered by the project scope. Official procurement-season eligibility has not been supplied.</p><span className="status-pill status-amber">Eligibility unverified</span></div></div>
-          <div className="explainer-card"><span className="explainer-number">03</span><div><h3>Preview the slot journey</h3><p>The next screen explains where appointment slots would appear after centre hours, capacity, staffing and rules are approved.</p><span className="status-pill status-muted">Preview only</span></div></div>
-          <div className="notice notice-green"><strong>Why is booking disabled?</strong><p>We have no centre authorization or verified operating capacity. The prototype intentionally avoids accepting farmer bookings or displaying invented live waiting times.</p></div>
+          <div className="explainer-card"><span className="explainer-number">01</span><div><h3>Choose your region</h3><p>The selector covers all Indian states and Union Territories. Source-backed physical centre records are added as they are verified.</p><span className="status-pill status-amber">{INDIA_CENTRES.length} directory records loaded</span></div></div>
+          <div className="explainer-card"><span className="explainer-number">02</span><div><h3>Check the source status</h3><p>Each centre carries its source, date and verification note. A market directory entry or tender reference is not proof of live operations.</p><span className="status-pill status-muted">Source tracked</span></div></div>
+          <div className="explainer-card"><span className="explainer-number">03</span><div><h3>Preview a demonstration slot</h3><p>Choose a sample time window and confirm a local demo reservation. It will appear on the centre desk but will not be transmitted externally.</p><span className="status-pill status-muted">Simulated only</span></div></div>
+          <div className="notice notice-green"><strong>Why no real booking?</strong><p>Centre authorization, active crop eligibility, current capacity, opening times and a live booking service have not been integrated. Aapurtikar keeps actual booking and live waiting-time APIs disabled.</p></div>
         </div>
       </div>
     </div>
   )
 }
 
-function SlotPreview({ crop, visitDate }: { crop: Crop; visitDate: string }) {
+function SlotPreview({
+  selectedState, selectedDistrict, selectedCentre, crop, visitDate, demoSlot, setDemoSlot, demoBooking, onConfirm,
+}: {
+  selectedState: string
+  selectedDistrict: string
+  selectedCentre: CentreRecord | undefined
+  crop: Crop
+  visitDate: string
+  demoSlot: string
+  setDemoSlot: (slot: string) => void
+  demoBooking: DemoBooking | null
+  onConfirm: (slot: string) => void
+}) {
   const formattedDate = useMemo(() => {
     if (!visitDate) return 'Date not selected'
     const value = new Date(`${visitDate}T00:00:00`)
     return value.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
   }, [visitDate])
+  const sampleSlots = ['09:00 – 10:00', '10:00 – 11:00', '11:00 – 12:00']
   return (
     <div className="page-content">
-      <SectionHeading eyebrow="FUTURE BOOKING FLOW · PREVIEW ONLY" title="Choose an arrival slot" intro="This screen demonstrates the intended slot-selection step. The options are not available for booking because the centre has not supplied verified capacity or operating hours." />
-      <div className="slot-progress"><span className="progress-done">1 <b>Centre & crop</b></span><i /><span className="progress-current">2 <b>Slot preview</b></span><i /><span>3 <b>Confirmation</b></span></div>
+      <SectionHeading eyebrow="DEMONSTRATION SCHEDULING · NOT A LIVE INVENTORY" title="Choose an arrival window" intro="These illustrative time windows make the proposed workflow testable in a classroom demo. They are not published by the selected centre and do not reserve real capacity." />
+      <div className="slot-progress"><span className="progress-done">1 <b>Location & crop</b></span><i /><span className="progress-current">2 <b>Choose window</b></span><i /><span className={demoBooking ? 'progress-done' : ''}>3 <b>Demo confirmation</b></span></div>
       <div className="slot-layout">
         <section className="panel slot-panel">
-          <div className="panel-heading"><div><p className="eyebrow">YOUR VISIT DETAILS</p><h2>Proposed visit information</h2></div><span className="round-icon">02</span></div>
-          <div className="visit-summary"><div><small>PROCUREMENT CENTRE</small><strong>CMS Kapurthala · New Dana Mandi</strong><span>Kapurthala, Punjab · Proposed / unverified</span></div><div><small>CROP</small><strong>{crop}</strong><span>Project scope only · eligibility unverified</span></div><div><small>PREFERRED DATE</small><strong>{formattedDate}</strong><span>Preview input, not a saved visit</span></div></div>
-          <div className="slot-list-heading"><div><p className="eyebrow">ARRIVAL WINDOWS</p><h2>Slots are not published</h2></div><span className="status-pill status-muted">Capacity not configured</span></div>
-          {['09:00 – 10:00', '10:00 – 11:00', '11:00 – 12:00'].map((slot) => <div className="slot-option disabled-slot" key={slot}><span className="radio-faux" /><strong>{slot}</strong><span className="slot-unavailable">Not published</span></div>)}
-          <div className="notice"><strong>No appointment has been allocated.</strong><p>These rows are placeholders to illustrate the future layout. No live slot inventory or capacity is queried.</p></div>
+          <div className="panel-heading"><div><p className="eyebrow">YOUR VISIT DETAILS</p><h2>Selected location</h2></div><span className="round-icon">02</span></div>
+          {selectedCentre ? (
+            <div className="visit-summary">
+              <div><small>CENTRE</small><strong>{selectedCentre.name}</strong><span>{selectedDistrict}, {selectedState}</span></div>
+              <div><small>COMMODITY</small><strong>{crop}</strong><span>Farmer-selected demo input; eligibility not verified</span></div>
+              <div><small>PREFERRED DATE</small><strong>{formattedDate}</strong><span>Not sent to the centre</span></div>
+            </div>
+          ) : <div className="directory-empty"><strong>No source-backed centre selected.</strong><p>Return to the farmer portal and choose one of the available directory records.</p></div>}
+          <div className="slot-list-heading"><div><p className="eyebrow">ILLUSTRATIVE TIME WINDOWS</p><h2>Select one for the demo</h2></div><span className="status-pill status-muted">Sample values only</span></div>
+          <div className="demo-slot-grid">
+            {sampleSlots.map((slot, index) => (
+              <button key={slot} className={demoSlot === slot ? 'demo-slot-card selected' : 'demo-slot-card'} onClick={() => setDemoSlot(slot)} disabled={!selectedCentre || !visitDate}>
+                <span className="demo-slot-index">0{index + 1}</span><strong>{slot}</strong><small>{demoSlot === slot ? 'Selected for demo' : 'Illustrative window'}</small>
+              </button>
+            ))}
+          </div>
+          <div className="demo-notice"><strong>Important distinction</strong><p>The centre's real operating hours and capacity have not been supplied. The displayed windows are hard-coded teaching examples, not live availability.</p></div>
         </section>
         <aside className="slot-aside">
-          <div className="panel slot-summary-card"><p className="eyebrow">BOOKING SUMMARY</p><div className="summary-lock">▣</div><h2>Booking disabled</h2><p className="muted">An authorized centre must confirm participation, crop eligibility, operating calendar, bays, staffing and allocation rules before bookings can open.</p><button className="button button-disabled full-width" disabled>Confirm booking</button><div className="summary-checks"><span><b>✓</b> Project scope displayed</span><span><b>–</b> Centre authorization pending</span><span><b>–</b> Slot capacity unavailable</span></div></div>
-          <div className="panel mini-info"><strong>Live wait estimate</strong><span className="status-pill status-muted">Disabled</span><p>Wait times in the Analytics section are offline simulation results, not a live estimate for this centre.</p></div>
+          <div className="panel slot-summary-card">
+            <p className="eyebrow">DEMO RESERVATION</p>
+            <div className="summary-lock">▣</div>
+            <h2>{demoBooking ? 'Demo confirmed' : 'Ready to simulate?'}</h2>
+            <p className="muted">{demoBooking ? 'A local-only demonstration record has been created in this page session.' : 'Select a time window, then create a simulated reservation for the classroom walkthrough.'}</p>
+            <button className={demoSlot && selectedCentre && visitDate ? 'button button-primary full-width' : 'button button-disabled full-width'} disabled={!demoSlot || !selectedCentre || !visitDate} onClick={() => onConfirm(demoSlot)}>{demoBooking ? 'Create another demo reservation' : 'Confirm demo reservation'}</button>
+            {demoBooking && (
+              <div className="demo-confirmation">
+                <span className="source-pill source-current">LOCAL DEMO ONLY</span>
+                <strong>{demoBooking.reference}</strong>
+                <p>{demoBooking.date} · {demoBooking.slot}</p>
+                <p>{demoBooking.crop} · {demoBooking.district}, {demoBooking.state}</p>
+                <small>Not transmitted, not stored in the backend, and not a government booking.</small>
+              </div>
+            )}
+            <div className="summary-checks"><span><b>✓</b> Farmer selections carried forward</span><span><b>✓</b> Demo time window selected</span><span><b>–</b> Real centre capacity not connected</span></div>
+          </div>
+          <div className="panel mini-info"><strong>Live wait estimate</strong><span className="status-pill status-muted">Disabled</span><p>The Analytics page contains offline simulation results only, not a live estimate for the selected centre.</p></div>
         </aside>
       </div>
     </div>
   )
 }
 
-function CentreDesk({ navigate }: { navigate: (page: Page) => void }) {
+function CentreDesk({ navigate, demoBooking }: { navigate: (page: Page) => void; demoBooking: DemoBooking | null }) {
+  const demoCentre = demoBooking ? INDIA_CENTRES.find((centre) => centre.id === demoBooking.centreId) : undefined
   return (
     <div className="page-content">
-      <SectionHeading eyebrow="ADMINISTRATOR PORTAL · DESKTOP VIEW" title="Procurement centre desk" intro="A centre-side operations workspace preview. It separates the planned workflow from real operations, which are not connected in this academic prototype." action={<span className="view-tag">OPERATIONS NOT ENABLED</span>} />
+      <SectionHeading eyebrow="CENTRE DESK · SIMULATED WORKSPACE" title="Procurement centre desk" intro="This workspace shows how a centre team could review farmer appointments. Any reservation shown here was created in local demo mode, not received from a live procurement system." action={<span className="view-tag">LIVE OPERATIONS DISABLED</span>} />
       <div className="centre-dashboard">
-        <aside className="admin-sidebar"><div className="admin-brand"><span>🌾</span><div><strong>Aapurtikar</strong><small>Centre management</small></div></div><div className="admin-nav-item active">▦ <span>Dashboard</span></div><div className="admin-nav-item">▣ <span>Bookings</span><em>Disabled</em></div><div className="admin-nav-item">☷ <span>Queue & operations</span></div><div className="admin-nav-item">⌖ <span>Centres & capacity</span></div><div className="admin-nav-item">◷ <span>Scheduling policy</span></div><div className="admin-nav-item" onClick={() => navigate('analytics')}>▥ <span>Analytics & evaluation</span></div></aside>
+        <aside className="admin-sidebar"><div className="admin-brand"><span>🌾</span><div><strong>Aapurtikar</strong><small>Centre management</small></div></div><div className="admin-nav-item active">▦ <span>Dashboard</span></div><div className="admin-nav-item">▣ <span>Demo reservations</span><em>Local only</em></div><div className="admin-nav-item">☷ <span>Queue & operations</span></div><div className="admin-nav-item">⌖ <span>Centres & capacity</span></div><div className="admin-nav-item">◷ <span>Scheduling policy</span></div><div className="admin-nav-item" onClick={() => navigate('analytics')}>▥ <span>Analytics & evaluation</span></div></aside>
         <div className="admin-main">
-          <div className="admin-topbar"><div><small>PROPOSED CENTRE</small><strong>CMS Kapurthala · New Dana Mandi</strong></div><span className="status-pill status-amber">Unverified candidate</span></div>
-          <div className="admin-welcome"><div><p className="eyebrow">CENTRE OPERATIONS OVERVIEW</p><h2>Operations readiness</h2><p>Required authorizations and service configuration must be completed before operational use.</p></div><div className="welcome-mark">🌱</div></div>
+          <div className="admin-topbar"><div><small>SELECTED DIRECTORY CENTRE</small><strong>{demoCentre?.name ?? 'No demo centre selected'}</strong></div><span className="status-pill status-amber">Source status varies · no live feed</span></div>
+          <div className="admin-welcome"><div><p className="eyebrow">CENTRE WORKSPACE PREVIEW</p><h2>Demo operations overview</h2><p>Use the Farmer portal to create a local demo reservation. It will appear here as a sample centre-side record.</p></div><div className="welcome-mark">🌱</div></div>
           <div className="admin-kpis">
-            <KpiCard title="Live bookings" value="—" label="No operational records" tone="blue" />
-            <KpiCard title="Farmer check-ins" value="—" label="Live check-in not connected" tone="green" />
-            <KpiCard title="Farmers served" value="—" label="Service events unavailable" tone="purple" />
-            <KpiCard title="Average wait" value="—" label="Live estimate disabled" tone="orange" />
+            <KpiCard title="Demo reservations" value={demoBooking ? '1' : '0'} label="Local page-session record" tone="blue" />
+            <KpiCard title="Live farmer check-ins" value="—" label="Not connected" tone="green" />
+            <KpiCard title="Farmers served" value="—" label="No operational events" tone="purple" />
+            <KpiCard title="Live average wait" value="—" label="Live estimate disabled" tone="orange" />
           </div>
+          {demoBooking ? (
+            <section className="panel demo-booking-record">
+              <div className="panel-heading"><div><p className="eyebrow">SIMULATED FARMER ARRIVAL PLAN</p><h3>Demo reservation record</h3></div><span className="source-pill source-current">LOCAL DEMO ONLY</span></div>
+              <div className="demo-booking-grid">
+                <div><small>REFERENCE</small><strong>{demoBooking.reference}</strong></div>
+                <div><small>CENTRE</small><strong>{demoCentre?.name ?? 'Selected centre'}</strong></div>
+                <div><small>LOCATION</small><strong>{demoBooking.district}, {demoBooking.state}</strong></div>
+                <div><small>COMMODITY</small><strong>{demoBooking.crop}</strong></div>
+                <div><small>VISIT DATE</small><strong>{demoBooking.date}</strong></div>
+                <div><small>DEMO TIME WINDOW</small><strong>{demoBooking.slot}</strong></div>
+              </div>
+              <p className="record-caveat">This record exists only in the current browser session. It was not saved to the database, transmitted to a procurement agency, or added to a real centre queue.</p>
+            </section>
+          ) : (
+            <section className="panel no-chart-data demo-empty-state">
+              <span className="chart-placeholder">▣</span><strong>No demo reservations yet</strong>
+              <p>Open the Farmer portal, select a source-listed centre and date, then complete a demo reservation. The simulated record will appear here.</p>
+              <button className="button button-primary" onClick={() => navigate('farmer')}>Start farmer demo →</button>
+            </section>
+          )}
           <div className="admin-content-grid">
-            <section className="panel admin-chart-panel"><div className="panel-heading"><div><p className="eyebrow">WAITING TIME TREND</p><h3>Operational history</h3></div><span className="status-pill status-muted">No data</span></div><div className="no-chart-data"><span className="chart-placeholder">▥</span><strong>No operational observations yet</strong><p>Verified waiting time will appear after authorized check-ins and service-start events are recorded.</p></div></section>
-            <section className="panel admin-queue-panel"><div className="panel-heading"><div><p className="eyebrow">LIVE QUEUE</p><h3>Queue status</h3></div><span className="status-pill status-muted">Not connected</span></div><div className="queue-row"><span>Currently waiting</span><strong>—</strong></div><div className="queue-row"><span>In service</span><strong>—</strong></div><div className="queue-row"><span>Next slot</span><strong>—</strong></div><div className="notice"><p>Queue details are unavailable because no live centre event feed is connected.</p></div></section>
+            <section className="panel admin-chart-panel"><div className="panel-heading"><div><p className="eyebrow">LIVE WAITING TIME TREND</p><h3>Operational history</h3></div><span className="status-pill status-muted">No live feed</span></div><div className="no-chart-data"><span className="chart-placeholder">▥</span><strong>No operational observations connected</strong><p>Verified waiting time requires authorized check-in, service-start and completion events from a participating centre.</p></div></section>
+            <section className="panel admin-queue-panel"><div className="panel-heading"><div><p className="eyebrow">LIVE QUEUE</p><h3>Queue status</h3></div><span className="status-pill status-muted">Disabled</span></div><div className="queue-row"><span>Currently waiting</span><strong>—</strong></div><div className="queue-row"><span>In service</span><strong>—</strong></div><div className="queue-row"><span>Next published slot</span><strong>—</strong></div><div className="notice"><p>Only local demo reservations are shown above. This is not a live centre queue.</p></div></section>
           </div>
-          <div className="panel policy-panel"><div><p className="eyebrow">SCHEDULING POLICY</p><h3>Baseline vs proposed policy</h3><p>The evaluation compares unmanaged first-come-first-served (FCFS) with staggered appointment slots using equivalent generated demand.</p></div><div className="policy-choice"><span className="policy-radio" /> Unmanaged FCFS <small>Baseline</small></div><div className="policy-choice selected"><span className="policy-radio" /> 15-minute staggered slots <small>Simulation candidate</small></div><button className="button button-secondary" onClick={() => navigate('analytics')}>View research results →</button></div>
+          <div className="panel policy-panel"><div><p className="eyebrow">SCHEDULING POLICY</p><h3>Baseline vs proposed policy</h3><p>The evaluation compares unmanaged first-come-first-served (FCFS) with staggered appointment slots using generated demand.</p></div><div className="policy-choice"><span className="policy-radio" /> Unmanaged FCFS <small>Baseline</small></div><div className="policy-choice selected"><span className="policy-radio" /> 15-minute staggered slots <small>Simulation candidate</small></div><button className="button button-secondary" onClick={() => navigate('analytics')}>View research results →</button></div>
         </div>
       </div>
     </div>
