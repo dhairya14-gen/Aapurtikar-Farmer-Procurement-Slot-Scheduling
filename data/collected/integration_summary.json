@@ -1,0 +1,24 @@
+{
+  "integration_date": "2026-11-24",
+  "source_inventory": {
+    "existing_directory_rows": 76,
+    "haryana_hsamb_inventory_rows": 220,
+    "non_haryana_lead_source_rows": 14,
+    "non_haryana_leads_added_to_ui": 13,
+    "duplicate_leads_suppressed": 1
+  },
+  "combined_ui_listing_rows": 309,
+  "states_and_uts": 20,
+  "haryana_districts": 20,
+  "source_boundaries": {
+    "hsamb": "Official state marketing-board purchase-centre inventory, detailed list dated 2024-11-28; current-season activation unverified.",
+    "non_haryana": "Unverified discovery leads; independent official confirmation required."
+  },
+  "operational_gates": {
+    "real_bookings_enabled": false,
+    "published_slots_enabled": false,
+    "live_capacity_enabled": false,
+    "live_queue_enabled": false,
+    "live_wait_estimates_enabled": false
+  }
+}

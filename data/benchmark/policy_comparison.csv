@@ -1,0 +1,5 @@
+policy,mean_on_site_wait_min,p95_on_site_wait_min,worst_observed_wait_across_30_reps_min,scenario_throughput_per_market_open_hour,mean_booking_lead_min,mean_natural_arrival_to_service_start_min,mean_p5_wait_min
+FCFS (unmanaged arrivals),8.835502,64.167255,174.640667,0.965405,0.000000,8.835502,0.000000
+Hourly batches,7.659143,41.867821,85.770279,0.941965,37.785512,45.444656,0.000000
+30-minute slots,3.306490,20.976722,59.369340,0.957598,23.321620,26.628110,0.000000
+15-minute staggered slots,1.625122,11.505085,46.076113,0.961371,16.151964,17.777085,0.000000

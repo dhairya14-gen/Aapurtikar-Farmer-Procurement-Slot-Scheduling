@@ -1,0 +1,26 @@
+AAPURTIKAR UPDATED SOURCE — APPLY INSTRUCTIONS
+
+This ZIP contains the updated Aapurtikar source tree. It intentionally excludes .git, .venv, node_modules, dist, .env and local database files.
+
+SAFE APPLY STEPS (Windows):
+1. Keep your current project folder and create a backup copy before replacing files.
+2. Extract the contents of this ZIP into the existing project root:
+   C:\Users\jaisw\OneDrive\ドキュメント\Farmer-Procurement-Slot-Scheduling
+3. Allow Windows to overwrite the matching project files. Do not delete the existing .git or .venv folders.
+4. Open PowerShell at the project root and run:
+   .\.venv\Scripts\python.exe -m pytest -q
+5. From the project root, run the backend in one terminal:
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8001 --reload
+6. In another terminal, run:
+   Set-Location src/frontend
+   npm.cmd run typecheck
+   npm.cmd run build
+   npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
+7. If port 5173 is already in use, the Vite server may already be running. Refresh http://127.0.0.1:5173 instead of starting a second server.
+
+IMPORTANT:
+- Keep booking creation, slot confirmation, live queue and live wait estimates disabled.
+- The Analytics simulation tab uses historical Punjab potato mandi arrivals (Nov 2021) as an aggregate demand profile. Farmer-level arrival times, lot sizes, service durations, appointment times and queue waits are synthetic simulation values.
+- The real-centre operations tab must continue to show unavailable until genuine, authorized centre records exist.
+- The upstream ICTD-IIT Delhi repository did not contain an explicit LICENSE file in the inspected version. Do not publicly redistribute the raw/cleaned source CSV until reuse permission is confirmed.
+- This ZIP does not publish or push anything to GitHub. Test locally first, then review and commit the updated source to the Aapurtikar repository.

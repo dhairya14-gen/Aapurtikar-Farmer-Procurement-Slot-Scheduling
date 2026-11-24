@@ -1,0 +1,39 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.tsbuildinfo
+
+# Node
+node_modules/
+dist/
+npm-debug.log*
+
+# Local databases and runtime artifacts
+*.db
+*.sqlite
+*.sqlite3
+postgres-data/
+*.log
+
+# Sensitive and locally collected data: never commit raw/processed records
+data/raw/**
+!data/raw/.gitkeep
+data/processed/**
+!data/processed/.gitkeep
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
