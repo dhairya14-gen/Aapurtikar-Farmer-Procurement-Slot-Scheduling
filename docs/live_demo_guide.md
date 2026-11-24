@@ -1,6 +1,6 @@
 # Live Local Demonstration Guide
 
-This guide starts the academic prototype on the same Windows computer. Both servers bind to loopback (`127.0.0.1`); do not change the host to `0.0.0.0` or expose either service publicly. PostgreSQL and a `.env` file are not required to run the current API or website.
+This guide demonstrates Aapurtikar on one Windows computer. Both development servers bind to loopback (`127.0.0.1`); do not change the host to `0.0.0.0` or expose either service publicly. PostgreSQL and a `.env` file are not required for the website or status API.
 
 ## 1. Start FastAPI
 
@@ -18,96 +18,93 @@ Open a second PowerShell terminal at the repository root and run:
 
 ```powershell
 Set-Location src/frontend
+npm.cmd ci  # first setup only
 npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-Run `npm.cmd ci` from `src/frontend` once if the dependencies have not yet been installed.
+Leave this terminal open too. The website address is `http://127.0.0.1:5173`. The existing Vite proxy forwards `/api` to `http://127.0.0.1:8000`.
 
-Leave this terminal open too. The expected website address is `http://127.0.0.1:5173`. The existing Vite proxy forwards `/api` to `http://127.0.0.1:8000`; no proxy setting was changed for this guide. `--strictPort` makes Vite stop if port 5173 is unavailable, so it will not silently choose a different URL.
+## 3. Recommended classroom demo sequence
 
-If recreating the environment, use the Python version listed in the root README and install `requirements.txt` in `.venv`; the frontend package lock is available for `npm.cmd ci`. No database is needed for the status API. The simulation summary used by the Analytics UI is bundled in the frontend and does not depend on the backend being online.
+Open Chrome and present the screens in this order.
 
-## 3. Website views
+### A. Overview
 
-Open these URLs in Chrome after both development servers are running:
+Open `http://127.0.0.1:5173/#home`.
 
-| View | URL | Demonstration point |
-|---|---|---|
-| Overview | `http://127.0.0.1:5173/#home` | Aapurtikar identity, Indian mandi source profile, farmer/centre entry points and research workflow |
-| Farmer portal | `http://127.0.0.1:5173/#farmer` | Mobile-first visit-planning preview, crop-scope selection, proposed centre and booking-disabled notice |
-| Slot preview | `http://127.0.0.1:5173/#slots` | Illustrative slot layout; capacity is unverified, no slots are published and confirmation is disabled |
-| Centre desk | `http://127.0.0.1:5173/#staff` | Administrator workspace preview with no live bookings, check-ins, queue or wait metrics |
-| Analytics | `http://127.0.0.1:5173/#analytics` | Separate offline synthetic benchmark and unavailable real-centre operational evidence tabs |
+Explain the purpose of Aapurtikar and the research workflow. The Punjab potato-arrivals benchmark is the initial regional simulation case study; it is not the geographic limit of the application.
 
-Recommended sequence: Overview → Farmer portal → Slot preview → Centre desk → Analytics (offline simulation, then real operations). Explain that these are academic demonstration screens and are not connected to a participating procurement centre.
+### B. Farmer portal — complete the interactive workflow
+
+Open `http://127.0.0.1:5173/#farmer`.
+
+The directory currently contains 76 named records across 20 States/UTs. All 36 States/UTs appear in the selector, but not all have loaded centre/market entries yet. The directory distinguishes e-NAM APMC/mandi listings from government procurement-centre directory and tender references.
+
+Recommended starting selection:
+- State: Uttar Pradesh
+- District: Siddharth Nagar
+- Mandi / procurement centre: Centre-B Pax Bijaura (PCF)
+- Commodity: Paddy
+- Preferred visit date: choose a date convenient for the demo
+
+Read the source status and caveat shown under the selected listing. Then click **Continue to slot preview**. The state, district, centre, crop and date are held in the app state and carried to the next screen.
+
+If using a different state, choose one with loaded records. When a state has no source-backed records in the current seed, the interface says so; do not claim it has no real procurement centres in the real world.
+
+### C. Slot preview — select a sample window and confirm the demo
+
+Open `http://127.0.0.1:5173/#slots` or continue from the Farmer portal.
+
+Choose one of the three illustrative windows (09:00–10:00, 10:00–11:00, 11:00–12:00), then click **Confirm demo reservation**. A reference beginning `AAP-DEMO-` should appear in the confirmation panel.
+
+These times are hard-coded demonstration values, not published centre inventory. The reservation is held only in local React page-session state. It is not posted to FastAPI, stored in the database, transmitted to an agency, or reserved at a real centre. Refreshing the page clears it.
+
+### D. Centre desk — show the staff-side record
+
+Open `http://127.0.0.1:5173/#staff`.
+
+The local demo reservation created in the previous step should appear with its reference, centre, location, commodity, date and sample window. Explain that this is how a centre staff view could present an appointment record. The page separately labels live farmer check-ins, queue and wait estimates as unavailable.
+
+### E. Analytics — explain the evidence
+
+Open `http://127.0.0.1:5173/#analytics`.
+
+Show **Offline simulation results**, explaining that the benchmark uses historical Punjab potato arrivals and synthetic farmer-level event/service assumptions. Then switch to **Real centre operations** to show the missing operational evidence and readiness gates. Do not describe simulated waiting-time improvements as measured results from a real centre.
 
 ## 4. API checks and expected status
 
-With FastAPI running, these read-only routes should return HTTP 200 and the status described:
-
-| Request | Expected response content |
-|---|---|
-| `GET http://127.0.0.1:8000/api/v1/health` | `status: ok`, bookings disabled, wait estimate disabled, centre unverified |
-| `GET http://127.0.0.1:8000/api/v1/status` | Application unverified; staff permissions awaiting authorization |
-| `GET http://127.0.0.1:8000/api/v1/centres/proposed` | CMS Kapurthala, New Dana Mandi proposed only and unverified; hours/capacity are null |
-| `GET http://127.0.0.1:8000/api/v1/scheduling/readiness` | Offline calculation available; operational configuration awaiting authorization |
-| `GET http://127.0.0.1:8000/api/v1/methodology/fcfs` | `mandatory_baseline` and FCFS check-in/tie rules |
-| `GET http://127.0.0.1:8000/api/v1/methodology/allocation` | Candidate design requires approval; booking remains disabled |
-| `GET http://127.0.0.1:8000/api/v1/metrics/definitions` | Formula definitions; results unavailable without genuine observations |
-| `GET http://127.0.0.1:8000/api/v1/evaluation/readiness` | Input unavailable, validation `not_run`, results unavailable |
-| `GET http://127.0.0.1:8000/api/v1/bookings/availability` | Booking disabled; no slots returned |
-| `POST http://127.0.0.1:8000/api/v1/bookings` | HTTP 409 `booking_disabled`; does not store the request |
-
-Optional PowerShell GET check:
+With FastAPI running, this read-only health route should return HTTP 200:
 
 ```powershell
-$apiBase = 'http://127.0.0.1:8000'
-$paths = @(
-  '/api/v1/health',
-  '/api/v1/status',
-  '/api/v1/centres/proposed',
-  '/api/v1/scheduling/readiness',
-  '/api/v1/methodology/fcfs',
-  '/api/v1/methodology/allocation',
-  '/api/v1/metrics/definitions',
-  '/api/v1/evaluation/readiness',
-  '/api/v1/bookings/availability'
-)
-foreach ($path in $paths) {
-  Write-Host "--- $path ---"
-  Invoke-RestMethod -Uri ($apiBase + $path) -Method Get
-}
+Invoke-RestMethod http://127.0.0.1:8000/api/v1/health | Format-List
 ```
 
-For the booking check, issue only an empty test body; the expected response is rejection:
+Expected safety states:
+- `status: ok`
+- `booking_status: disabled`
+- `booking_enabled: False`
+- `wait_estimate_status: disabled`
+- `centre_status: unverified`
 
-```powershell
-try {
-  Invoke-WebRequest -Uri 'http://127.0.0.1:8000/api/v1/bookings' -Method Post -ContentType 'application/json' -Body '{}' -ErrorAction Stop
-  throw 'Unexpected response: booking creation must remain disabled.'
-} catch {
-  if ($_.Exception.Response -and [int]$_.Exception.Response.StatusCode -eq 409) {
-    'Expected: HTTP 409 booking_disabled'
-  } else {
-    throw
-  }
-}
-```
+The API does not create demo reservations. The demo reservation is a frontend-only teaching flow and does not change backend readiness.
 
-## 5. What works and what is disabled
+The backend booking route must continue to reject real booking requests with HTTP 409 `booking_disabled`. Do not attempt to enable it during a classroom demo.
 
-**Works:** responsive Aapurtikar React navigation; farmer visit-planning controls; slot preview with confirmation disabled; centre operations readiness view; offline simulation benchmark sourced from historical Punjab mandi demand; source profile and policy comparison visualizations; backend health/configuration status reads; backend scheduling/evaluation service tests.
+## 5. What is real, what is simulated, and what is not integrated
 
-**Intentionally disabled or unavailable:** booking creation, slot publication/reservation, live wait estimates, farmer/staff authentication and permissions, operational queue/event collection, centre activation, PostgreSQL-backed API storage, and real-centre measured analytics. The offline benchmark uses public historical Punjab potato mandi arrivals to create synthetic farmer-level events; those events and outputs are not real farmer or centre records. CMS Kapurthala, New Dana Mandi remains a proposed unverified centre.
+**Source-backed directory records:** the seed combines e-NAM state/district/mandi mapping entries, a Haryana purchase-centre directory dated 28 Nov 2024, two Uttar Pradesh official procurement-centre tender references, and one NAFED e-Samridhi portal listing. Their types, source dates and caveats are visible in the farmer portal and documented in [the national directory sourcing notes](india-directory-sourcing.md). The data is a partial directory, not complete national coverage. An e-NAM APMC/mandi record is not automatically an MSP procurement centre.
+
+**Local demonstration:** farmer selections carry forward, sample time windows can be selected, and a local-only demo reservation appears on the centre desk.
+
+**Still unavailable:** real farmer booking, slot publication, centre authorization, live capacity, current centre hours, live wait estimates, operational queue/check-ins, authentication and database persistence. Do not claim that a centre is accepting bookings because it appears in the directory.
 
 ## 6. Troubleshooting
 
-- **Python command/import error:** verify `.venv\Scripts\python.exe` exists and that the pinned backend dependencies are installed. Start the backend from the repository root so `--app-dir src/backend` resolves correctly.
-- **Frontend dependencies missing:** from `src/frontend`, run `npm.cmd ci` once, then retry the Vite command.
-- **Port 5173 is already in use:** this often means Vite is already running. Do not start a second server; refresh `http://127.0.0.1:5173`. If you need to restart it, return to the original Vite terminal and press Ctrl+C, then start it again. Inspect `Get-NetTCPConnection -State Listen -LocalPort 8000,5173` or `netstat -ano -p tcp | Select-String ':8000|:5173'` only if the owning terminal is unknown. Stop only a process you own. If changing the backend port, update `server.proxy['/api'].target` in `src/frontend/vite.config.ts` to that exact localhost port before starting Vite.
-- **API appears offline in the browser:** keep the FastAPI terminal running on port 8000. From a second PowerShell window, run `Invoke-RestMethod http://127.0.0.1:8000/api/v1/health`. If that fails, restart FastAPI using the command in Section 1. The frontend still shows the offline simulation tab if the API is unavailable; that does not mean live bookings or wait estimates are active.
-- **Windows reports `WinError 10013` or denies localhost HTTP:** stop the connectivity check. Do not disable Firewall/antivirus, broaden the bind address, or expose the server publicly. Ask the device administrator to inspect local socket/port policy.
-- **Port reservation check unavailable:** the current shell's `netsh` did not support the excluded TCP port query. No conclusion about excluded/reserved port ranges can be made from this audit.
-- **PostgreSQL/Docker errors:** PostgreSQL is not needed by the current application API. Docker Desktop's Linux engine was unavailable during this audit; do not treat a successful app startup as proof of PostgreSQL connectivity.
+- **Python command/import error:** verify `.venv\Scripts\python.exe` exists, install backend dependencies, and start from the repository root.
+- **Frontend dependencies missing:** from `src/frontend`, run `npm.cmd ci`, then retry Vite.
+- **Port 5173 already in use:** this often means Vite is already running. Refresh `http://127.0.0.1:5173` rather than starting a second instance. If restarting, press Ctrl+C in the original Vite terminal first.
+- **API appears offline:** keep FastAPI running on port 8000 and test `Invoke-RestMethod http://127.0.0.1:8000/api/v1/health` from a second PowerShell window.
+- **Windows reports `WinError 10013`:** do not disable firewall/antivirus, broaden the bind address or expose the server publicly. Ask the device administrator to inspect local socket/port policy.
+- **PostgreSQL/Docker errors:** PostgreSQL is not required for the current demonstration. The API health response reports `database_status: not_checked`.
 
 Stop each development server with Ctrl+C in its own PowerShell terminal.
