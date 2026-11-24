@@ -226,7 +226,7 @@ function FarmerPortal({
   const statusText = selectedCentre?.recordStatus === 'official-tender-reference'
     ? 'Official procurement tender reference'
     : selectedCentre?.recordStatus === 'official-directory-listing'
-      ? 'Official directory listing · season unverified'
+      ? 'Official directory entry · operation unverified'
       : selectedCentre?.recordStatus === 'portal-listing'
         ? 'Government portal listing · verify season'
         : 'Not listed'
@@ -316,7 +316,7 @@ function FarmerPortal({
           <div className="phone-home-indicator" />
         </section>
         <div className="farmer-explainer">
-          <div className="explainer-card"><span className="explainer-number">01</span><div><h3>Choose your region</h3><p>The selector covers all Indian states and Union Territories. Source-backed physical centre records are added as they are verified.</p><span className="status-pill status-amber">{INDIA_CENTRES.length} directory records loaded</span></div></div>
+          <div className="explainer-card"><span className="explainer-number">01</span><div><h3>Choose your region</h3><p>The selector covers all Indian states and Union Territories. Source-backed physical centre records are added as they are verified.</p><span className="status-pill status-amber">{INDIA_CENTRES.length} records · {new Set(INDIA_CENTRES.map((centre) => centre.state)).size} states/UTs</span></div></div>
           <div className="explainer-card"><span className="explainer-number">02</span><div><h3>Check the source status</h3><p>Each centre carries its source, date and verification note. A market directory entry or tender reference is not proof of live operations.</p><span className="status-pill status-muted">Source tracked</span></div></div>
           <div className="explainer-card"><span className="explainer-number">03</span><div><h3>Preview a demonstration slot</h3><p>Choose a sample time window and confirm a local demo reservation. It will appear on the centre desk but will not be transmitted externally.</p><span className="status-pill status-muted">Simulated only</span></div></div>
           <div className="notice notice-green"><strong>Why no real booking?</strong><p>Centre authorization, active crop eligibility, current capacity, opening times and a live booking service have not been integrated. Aapurtikar keeps actual booking and live waiting-time APIs disabled.</p></div>
