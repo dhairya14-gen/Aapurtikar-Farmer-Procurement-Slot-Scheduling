@@ -130,7 +130,7 @@ function App() {
         <ApiStatusBar health={health} />
 
         {page === 'home' && <Home navigate={navigate} directoryCount={allCentres.length} directoryStateCount={directoryStateCount} />}
-        {page === 'farmer' && <FarmerPortal navigate={navigate} selectedState={selectedState} setSelectedState={setSelectedState} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} selectedCentreId={selectedCentreId} setSelectedCentreId={setSelectedCentreId} crop={crop} setCrop={setCrop} visitDate={visitDate} setVisitDate={setVisitDate} selectedCentre={selectedCentre} districtsForState={districtsForState} centresForSelection={centresForSelection} directoryCount={allCentres.length} directoryStateCount={directoryStateCount} directoryLoadState={directoryLoadState} />}
+        {page === 'farmer' && <FarmerPortal navigate={navigate} selectedState={selectedState} setSelectedState={setSelectedState} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} selectedCentreId={selectedCentreId} setSelectedCentreId={setSelectedCentreId} crop={crop} setCrop={setCrop} visitDate={visitDate} setVisitDate={setVisitDate} selectedCentre={selectedCentre} districtsForState={districtsForState} centresForSelection={centresForSelection} centres={allCentres} directoryCount={allCentres.length} directoryStateCount={directoryStateCount} directoryLoadState={directoryLoadState} />}
         {page === 'slots' && <SlotPreview selectedState={selectedState} selectedDistrict={selectedDistrict} selectedCentre={selectedCentre} crop={crop} visitDate={visitDate} demoSlot={demoSlot} setDemoSlot={(slot) => { setDemoSlot(slot); setDemoBooking(null) }} demoBooking={demoBooking} onConfirm={confirmDemoBooking} />}
         {page === 'staff' && <CentreDesk navigate={navigate} demoBooking={demoBooking} centres={allCentres} />}
         {page === 'analytics' && <Analytics activeTab={analyticsTab} setActiveTab={setAnalyticsTab} />}
@@ -239,7 +239,7 @@ function WorkflowStep({ number, title, detail }: { number: string; title: string
 function FarmerPortal({
   navigate, selectedState, setSelectedState, selectedDistrict, setSelectedDistrict,
   selectedCentreId, setSelectedCentreId, crop, setCrop, visitDate, setVisitDate,
-  selectedCentre, districtsForState, centresForSelection, directoryCount, directoryStateCount, directoryLoadState,
+  selectedCentre, districtsForState, centresForSelection, centres, directoryCount, directoryStateCount, directoryLoadState,
 }: {
   navigate: (page: Page) => void
   selectedState: string
@@ -255,6 +255,7 @@ function FarmerPortal({
   selectedCentre: CentreRecord | undefined
   districtsForState: string[]
   centresForSelection: CentreRecord[]
+  centres: CentreRecord[]
   directoryCount: number
   directoryStateCount: number
   directoryLoadState: 'loading' | 'ready' | 'error'
@@ -289,7 +290,7 @@ function FarmerPortal({
                 <label htmlFor="india-state">1. State / Union Territory</label>
                 <select id="india-state" value={selectedState} onChange={(event) => {
                   const nextState = event.target.value
-                  const firstCentre = INDIA_CENTRES.find((centre) => centre.state === nextState)
+                  const firstCentre = centres.find((centre) => centre.state === nextState)
                   setSelectedState(nextState)
                   setSelectedDistrict(firstCentre?.district ?? '')
                   setSelectedCentreId(firstCentre?.id ?? '')
@@ -301,7 +302,7 @@ function FarmerPortal({
                 <label htmlFor="india-district">2. District</label>
                 <select id="india-district" value={selectedDistrict} disabled={districtsForState.length === 0} onChange={(event) => {
                   const nextDistrict = event.target.value
-                  const firstCentre = centresForSelection.find((centre) => centre.district === nextDistrict) ?? INDIA_CENTRES.find((centre) => centre.state === selectedState && centre.district === nextDistrict)
+                  const firstCentre = centres.find((centre) => centre.state === selectedState && centre.district === nextDistrict)
                   setSelectedDistrict(nextDistrict)
                   setSelectedCentreId(firstCentre?.id ?? '')
                 }}>
