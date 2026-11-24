@@ -6,7 +6,7 @@ The five-page React application loads the supplemental directory from `src/front
 - Existing directory preserved: 76 source-tracked APMC/mandi and procurement references.
 - Added: 220 official Haryana State Agricultural Marketing Board (HSAMB) purchase-centre inventory rows.
 - Added: 13 non-duplicate non-Haryana discovery leads from 14 source rows.
-- One Uttar Pradesh lead (`Ramaipur 1 (FCS) BDH`, Mirzapur) duplicates an existing source-tracked entry and is not duplicated in the UI; it remains in the source register.
+- One Uttar Pradesh lead (`Ramaipur 1 (FCS) BDH`, Mirzapur) duplicates an existing source-tracked entry, so it is suppressed from the supplemental asset; the existing directory entry remains available in the UI.
 - Combined selectable UI directory: 309 listings and leads across 20 States/UTs.
 
 ## Verification boundaries
