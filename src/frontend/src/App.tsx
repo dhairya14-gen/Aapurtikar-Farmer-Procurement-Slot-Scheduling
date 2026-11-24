@@ -224,9 +224,9 @@ function FarmerPortal({
 }) {
   const [language, setLanguage] = useState<'English' | 'हिन्दी'>('English')
   const statusText = selectedCentre?.recordStatus === 'official-tender-reference'
-    ? 'Official tender reference'
+    ? 'Official procurement tender reference'
     : selectedCentre?.recordStatus === 'official-directory-listing'
-      ? 'Official directory listing · historical'
+      ? 'Official directory listing · season unverified'
       : selectedCentre?.recordStatus === 'portal-listing'
         ? 'Government portal listing · verify season'
         : 'Not listed'
@@ -298,7 +298,9 @@ function FarmerPortal({
                 <div className="centre-source-heading"><strong>{selectedCentre.name}</strong><span className={selectedCentre.recordStatus === 'official-tender-reference' ? 'source-pill source-current' : 'source-pill'}>{statusText}</span></div>
                 <p>{selectedCentre.district}, {selectedCentre.state}{selectedCentre.pincode ? ` · PIN ${selectedCentre.pincode}` : ''}</p>
                 {selectedCentre.address && <p>{selectedCentre.address}</p>}
+                <p className="centre-agency">Record type: {selectedCentre.centreType}</p>
                 <p className="centre-agency">Agency: {selectedCentre.agency ?? 'Not stated in source'}</p>
+                <p className="centre-agency">Source: {selectedCentre.sourceName} · {selectedCentre.sourceDate}</p>
                 {selectedCentre.commodity && <p className="centre-agency">Source commodity/season: {selectedCentre.commodity}</p>}
                 <p className="source-caveat">{selectedCentre.verificationNote}</p>
                 <a href={selectedCentre.sourceUrl} target="_blank" rel="noreferrer">View source record ↗</a>
