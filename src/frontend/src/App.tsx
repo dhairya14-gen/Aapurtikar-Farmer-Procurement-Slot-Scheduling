@@ -71,10 +71,21 @@ function App() {
     const loadCollectedDirectory = async () => {
       try {
         const response = await fetch('/collected-centres.json.gz', { signal: controller.signal })
-        if (!response.ok || !response.body) throw new Error(`Directory asset unavailable (${response.status}).`)
-        if (typeof DecompressionStream === 'undefined') throw new Error('This browser does not support compressed directory data.')
-        const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'))
-        const records = JSON.parse(await new Response(decompressed).text()) as CentreRecord[]
+        if (!response.ok) throw new Error(`Directory asset unavailable (${response.status}).`)
+        // Some servers transparently decompress .gz responses before Fetch exposes the body.
+        // Detect the gzip magic bytes so both compressed and already-decoded responses work.
+        const payload = await response.arrayBuffer()
+        const header = new Uint8Array(payload.slice(0, 2))
+        let directoryJson: string
+        if (header[0] === 0x1f && header[1] === 0x8b) {
+          if (typeof DecompressionStream === 'undefined') throw new Error('This browser cannot decompress the supplemental directory asset.')
+          const compressed = new Blob([payload]).stream()
+          const decompressed = compressed.pipeThrough(new DecompressionStream('gzip'))
+          directoryJson = await new Response(decompressed).text()
+        } else {
+          directoryJson = new TextDecoder('utf-8').decode(payload)
+        }
+        const records = JSON.parse(directoryJson) as CentreRecord[]
         if (!Array.isArray(records) || records.length !== 233) throw new Error('Collected directory validation failed; expected 233 supplemental records.')
         setCollectedCentres(records)
         setDirectoryLoadState('ready')
