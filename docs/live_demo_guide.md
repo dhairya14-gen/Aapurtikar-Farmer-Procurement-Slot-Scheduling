@@ -7,10 +7,10 @@ This guide demonstrates Aapurtikar on one Windows computer. Both development ser
 Open PowerShell at the repository root and run:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8000 --reload
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8001 --reload
 ```
 
-Leave the terminal open. Uvicorn should report that it is running on `http://127.0.0.1:8000`.
+Leave the terminal open. Uvicorn should report that it is running on `http://127.0.0.1:8001`.
 
 ## 2. Start React/Vite
 
@@ -22,7 +22,7 @@ npm.cmd ci  # first setup only
 npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-Leave this terminal open too. The website address is `http://127.0.0.1:5173`. The existing Vite proxy forwards `/api` to `http://127.0.0.1:8000`.
+Leave this terminal open too. The website address is `http://127.0.0.1:5173`. The existing Vite proxy forwards `/api` to `http://127.0.0.1:8001`.
 
 ## 3. Recommended classroom demo sequence
 
@@ -76,7 +76,7 @@ Show **Offline simulation results**, explaining that the benchmark uses historic
 With FastAPI running, this read-only health route should return HTTP 200:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/v1/health | Format-List
+Invoke-RestMethod http://127.0.0.1:8001/api/v1/health | Format-List
 ```
 
 Expected safety states:
@@ -103,7 +103,7 @@ The backend booking route must continue to reject real booking requests with HTT
 - **Python command/import error:** verify `.venv\Scripts\python.exe` exists, install backend dependencies, and start from the repository root.
 - **Frontend dependencies missing:** from `src/frontend`, run `npm.cmd ci`, then retry Vite.
 - **Port 5173 already in use:** this often means Vite is already running. Refresh `http://127.0.0.1:5173` rather than starting a second instance. If restarting, press Ctrl+C in the original Vite terminal first.
-- **API appears offline:** keep FastAPI running on port 8000 and test `Invoke-RestMethod http://127.0.0.1:8000/api/v1/health` from a second PowerShell window.
+- **API appears offline:** keep FastAPI running on port 8001 and test `Invoke-RestMethod http://127.0.0.1:8001/api/v1/health` from a second PowerShell window.
 - **Windows reports `WinError 10013`:** do not disable firewall/antivirus, broaden the bind address or expose the server publicly. Ask the device administrator to inspect local socket/port policy.
 - **PostgreSQL/Docker errors:** PostgreSQL is not required for the current demonstration. The API health response reports `database_status: not_checked`.
 

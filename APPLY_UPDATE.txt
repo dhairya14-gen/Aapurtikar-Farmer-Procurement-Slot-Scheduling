@@ -10,7 +10,7 @@ SAFE APPLY STEPS (Windows):
 4. Open PowerShell at the project root and run:
    .\.venv\Scripts\python.exe -m pytest -q
 5. From the project root, run the backend in one terminal:
-   .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8000 --reload
+   .\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8001 --reload
 6. In another terminal, run:
    Set-Location src/frontend
    npm.cmd run typecheck

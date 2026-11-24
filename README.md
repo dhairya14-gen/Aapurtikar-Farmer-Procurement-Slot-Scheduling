@@ -6,7 +6,7 @@
 **Application scope:** India-wide directory architecture; source-backed seed coverage is partial
 **Status:** Academic prototype. No procurement centre is connected for live operations.
 
-This repository contains the Aapurtikar React/TypeScript website, a FastAPI status API, scheduling/evaluation services, and an optional local PostgreSQL foundation. The farmer portal has a national State/UT selector, district and market/centre selection, crop/date inputs, and a slot preview that carries the selections forward. The seed directory currently contains 76 named e-NAM APMC/mandi and government procurement-centre references across 20 States/UTs; these entity types and their source/verification statuses are kept separate. This is a partial directory, not complete national coverage. A selectable sample time window can create a local-only demo reservation that appears on the centre desk. It is not sent to an API or stored in the backend. Real bookings, published slots, live queue and live wait estimates remain intentionally disabled. No real farmer, booking, queue, or operational records are included.
+This repository contains the Aapurtikar React/TypeScript website, a FastAPI status API, scheduling/evaluation services, and an optional local PostgreSQL foundation. The farmer portal has a national State/UT selector, district and market/centre selection, crop/date inputs, and a slot preview that carries the selections forward. The seed directory currently contains 309 source-tracked directory listings/leads across 20 States/UTs: 76 existing records, 220 HSAMB purchase-centre inventory entries and 13 additional non-Haryana discovery leads (one duplicate lead is retained in raw source and not duplicated in the UI); these entity types and their source/verification statuses are kept separate. This is a partial directory, not complete national coverage. A selectable sample time window can create a local-only demo reservation that appears on the centre desk. It is not sent to an API or stored in the backend. Real bookings, published slots, live queue and live wait estimates remain intentionally disabled. No real farmer, booking, queue, or operational records are included.
 
 ## Mandatory CA-1 objectives
 
@@ -55,7 +55,7 @@ docker compose ps
 Use two PowerShell terminals from the repository root. In the first terminal, start FastAPI:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8000 --reload
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir src/backend --host 127.0.0.1 --port 8001 --reload
 ```
 
 In the second terminal, start Vite:
@@ -66,7 +66,7 @@ npm.cmd ci  # first setup only
 npm.cmd run dev -- --host 127.0.0.1 --port 5173 --strictPort
 ```
 
-Open `http://127.0.0.1:5173`. Vite proxies `/api` to `http://127.0.0.1:8000`, as configured in `src/frontend/vite.config.ts`. FastAPI's health endpoint is `http://127.0.0.1:8000/api/v1/health`; interactive API documentation is at `http://127.0.0.1:8000/docs`. `--strictPort` makes Vite stop with a clear error if 5173 is occupied instead of quietly changing the demo URL.
+Open `http://127.0.0.1:5173`. Vite proxies `/api` to `http://127.0.0.1:8001`, as configured in `src/frontend/vite.config.ts`. FastAPI's health endpoint is `http://127.0.0.1:8001/api/v1/health`; interactive API documentation is at `http://127.0.0.1:8001/docs`. `--strictPort` makes Vite stop with a clear error if 5173 is occupied instead of quietly changing the demo URL.
 
 See [the live local demonstration guide](docs/live_demo_guide.md) for all five view URLs, API checks, expected safety statuses and troubleshooting. In the current audit environment, localhost HTTP access returned Windows `WinError 10013`; API/browser connectivity has not been verified here.
 
@@ -104,7 +104,7 @@ Backend tests exercise API handler contracts, scheduling/evaluation logic and sc
 - `/#staff` — centre desk shows the local demo reservation separately from unavailable live check-ins, queue and waiting-time states
 - `/#analytics` — separate tabs for offline simulation results and unavailable real-centre operational evidence
 
-Use the navigation at the top of the page to move between views. API status is informational and does not enable any operational action. Demo reservations exist only in frontend page-session state and disappear on refresh; they do not call the booking API. The research benchmark is embedded as aggregate static output in `src/frontend/src/researchData.ts`, so it remains visible even if the local API is temporarily offline. The source-tracked market/centre seed is in `src/frontend/src/nationalDirectory.ts` and `data/india/centre-directory-seed.csv`; read [the national directory sourcing notes](docs/india-directory-sourcing.md) before describing any listing as an active procurement centre.
+Use the navigation at the top of the page to move between views. API status is informational and does not enable any operational action. Demo reservations exist only in frontend page-session state and disappear on refresh; they do not call the booking API. The research benchmark is embedded as aggregate static output in `src/frontend/src/researchData.ts`, so it remains visible even if the local API is temporarily offline. The original 76-record directory is in `src/frontend/src/nationalDirectory.ts` and `data/india/centre-directory-seed.csv`. The supplemental 220-row HSAMB inventory and 13 non-duplicate discovery leads load from `src/frontend/public/collected-centres.json.gz`; reconciliation notes are in `data/collected/`; read [the national directory sourcing notes](docs/india-directory-sourcing.md) before describing any listing as an active procurement centre.
 
 
 ## Indian mandi data and synthetic queue benchmark

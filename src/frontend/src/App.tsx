@@ -28,6 +28,8 @@ function pageFromHash(): Page {
 function App() {
   const [page, setPage] = useState<Page>(pageFromHash)
   const [health, setHealth] = useState<Loadable<ApiHealth>>({ state: 'loading' })
+  const [collectedCentres, setCollectedCentres] = useState<CentreRecord[]>([])
+  const [directoryLoadState, setDirectoryLoadState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [selectedState, setSelectedState] = useState('Uttar Pradesh')
   const [selectedDistrict, setSelectedDistrict] = useState('Siddharth Nagar')
   const [selectedCentreId, setSelectedCentreId] = useState('up-bijaura-pcf')
@@ -37,9 +39,11 @@ function App() {
   const [demoBooking, setDemoBooking] = useState<DemoBooking | null>(null)
   const [analyticsTab, setAnalyticsTab] = useState<'simulation' | 'operational'>('simulation')
 
-  const selectedCentre = INDIA_CENTRES.find((centre) => centre.id === selectedCentreId)
-  const districtsForState = Array.from(new Set(INDIA_CENTRES.filter((centre) => centre.state === selectedState).map((centre) => centre.district))).sort()
-  const centresForSelection = INDIA_CENTRES.filter((centre) => centre.state === selectedState && centre.district === selectedDistrict)
+  const allCentres = useMemo(() => [...INDIA_CENTRES, ...collectedCentres], [collectedCentres])
+  const directoryStateCount = useMemo(() => new Set(allCentres.map((centre) => centre.state)).size, [allCentres])
+  const selectedCentre = allCentres.find((centre) => centre.id === selectedCentreId)
+  const districtsForState = Array.from(new Set(allCentres.filter((centre) => centre.state === selectedState).map((centre) => centre.district))).sort()
+  const centresForSelection = allCentres.filter((centre) => centre.state === selectedState && centre.district === selectedDistrict)
 
   const confirmDemoBooking = (slot: string) => {
     if (!selectedCentre || !visitDate) return
@@ -59,6 +63,28 @@ function App() {
   useEffect(() => {
     const controller = new AbortController()
     getApi<ApiHealth>(apiPaths.health, controller.signal).then(setHealth)
+    return () => controller.abort()
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const loadCollectedDirectory = async () => {
+      try {
+        const response = await fetch('/collected-centres.json.gz', { signal: controller.signal })
+        if (!response.ok || !response.body) throw new Error(`Directory asset unavailable (${response.status}).`)
+        if (typeof DecompressionStream === 'undefined') throw new Error('This browser does not support compressed directory data.')
+        const decompressed = response.body.pipeThrough(new DecompressionStream('gzip'))
+        const records = JSON.parse(await new Response(decompressed).text()) as CentreRecord[]
+        if (!Array.isArray(records) || records.length !== 233) throw new Error('Collected directory validation failed; expected 233 supplemental records.')
+        setCollectedCentres(records)
+        setDirectoryLoadState('ready')
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        console.error('Unable to load collected centre directory:', error)
+        setDirectoryLoadState('error')
+      }
+    }
+    void loadCollectedDirectory()
     return () => controller.abort()
   }, [])
 
@@ -103,10 +129,10 @@ function App() {
         </div>
         <ApiStatusBar health={health} />
 
-        {page === 'home' && <Home navigate={navigate} />}
-        {page === 'farmer' && <FarmerPortal navigate={navigate} selectedState={selectedState} setSelectedState={setSelectedState} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} selectedCentreId={selectedCentreId} setSelectedCentreId={setSelectedCentreId} crop={crop} setCrop={setCrop} visitDate={visitDate} setVisitDate={setVisitDate} selectedCentre={selectedCentre} districtsForState={districtsForState} centresForSelection={centresForSelection} />}
+        {page === 'home' && <Home navigate={navigate} directoryCount={allCentres.length} directoryStateCount={directoryStateCount} />}
+        {page === 'farmer' && <FarmerPortal navigate={navigate} selectedState={selectedState} setSelectedState={setSelectedState} selectedDistrict={selectedDistrict} setSelectedDistrict={setSelectedDistrict} selectedCentreId={selectedCentreId} setSelectedCentreId={setSelectedCentreId} crop={crop} setCrop={setCrop} visitDate={visitDate} setVisitDate={setVisitDate} selectedCentre={selectedCentre} districtsForState={districtsForState} centresForSelection={centresForSelection} directoryCount={allCentres.length} directoryStateCount={directoryStateCount} directoryLoadState={directoryLoadState} />}
         {page === 'slots' && <SlotPreview selectedState={selectedState} selectedDistrict={selectedDistrict} selectedCentre={selectedCentre} crop={crop} visitDate={visitDate} demoSlot={demoSlot} setDemoSlot={(slot) => { setDemoSlot(slot); setDemoBooking(null) }} demoBooking={demoBooking} onConfirm={confirmDemoBooking} />}
-        {page === 'staff' && <CentreDesk navigate={navigate} demoBooking={demoBooking} />}
+        {page === 'staff' && <CentreDesk navigate={navigate} demoBooking={demoBooking} centres={allCentres} />}
         {page === 'analytics' && <Analytics activeTab={analyticsTab} setActiveTab={setAnalyticsTab} />}
       </main>
 
@@ -142,7 +168,7 @@ function SectionHeading({ eyebrow, title, intro, action }: { eyebrow: string; ti
   )
 }
 
-function Home({ navigate }: { navigate: (page: Page) => void }) {
+function Home({ navigate, directoryCount, directoryStateCount }: { navigate: (page: Page) => void; directoryCount: number; directoryStateCount: number }) {
   return (
     <>
       <section className="hero-grid">
@@ -171,6 +197,14 @@ function Home({ navigate }: { navigate: (page: Page) => void }) {
         <div className="research-stat"><strong>{benchmark.source.markets}</strong><span>Punjab markets</span></div>
         <div className="research-stat"><strong>{benchmark.source.arrivalsTonnes.toLocaleString('en-IN', { maximumFractionDigits: 2 })} t</strong><span>Potato arrivals in source</span></div>
         <div className="research-period"><strong>1–30 Nov 2021</strong><span>Historical source period</span></div>
+      </section>
+
+      <section className="research-strip directory-coverage-strip">
+        <div className="research-strip-title"><span className="mini-icon">⌖</span><div><strong>Source-tracked centre directory</strong><small>Listings and leads · not confirmation of live procurement</small></div></div>
+        <div className="research-stat"><strong>{directoryCount}</strong><span>Directory listings & leads</span></div>
+        <div className="research-stat"><strong>{directoryStateCount}</strong><span>States / UTs represented</span></div>
+        <div className="research-stat"><strong>220</strong><span>HSAMB purchase-centre inventory rows</span></div>
+        <div className="research-period"><strong>13</strong><span>Additional unverified leads · 1 duplicate suppressed</span></div>
       </section>
 
       <section className="home-lower">
@@ -205,7 +239,7 @@ function WorkflowStep({ number, title, detail }: { number: string; title: string
 function FarmerPortal({
   navigate, selectedState, setSelectedState, selectedDistrict, setSelectedDistrict,
   selectedCentreId, setSelectedCentreId, crop, setCrop, visitDate, setVisitDate,
-  selectedCentre, districtsForState, centresForSelection,
+  selectedCentre, districtsForState, centresForSelection, directoryCount, directoryStateCount, directoryLoadState,
 }: {
   navigate: (page: Page) => void
   selectedState: string
@@ -221,15 +255,20 @@ function FarmerPortal({
   selectedCentre: CentreRecord | undefined
   districtsForState: string[]
   centresForSelection: CentreRecord[]
+  directoryCount: number
+  directoryStateCount: number
+  directoryLoadState: 'loading' | 'ready' | 'error'
 }) {
   const [language, setLanguage] = useState<'English' | 'हिन्दी'>('English')
   const statusText = selectedCentre?.recordStatus === 'official-tender-reference'
     ? 'Official procurement tender reference'
     : selectedCentre?.recordStatus === 'official-directory-listing'
-      ? 'Official directory entry · operation unverified'
+      ? (selectedCentre.dataLayer === 'official_inventory' ? 'Official HSAMB purchase-centre inventory · season unverified' : 'Official directory entry · operation unverified')
       : selectedCentre?.recordStatus === 'portal-listing'
         ? 'Government portal listing · verify season'
-        : 'Not listed'
+        : selectedCentre?.recordStatus === 'discovery-lead'
+          ? 'Unverified discovery lead · not an operational confirmation'
+          : 'Not listed'
   return (
     <div className="page-content">
       <SectionHeading
@@ -272,7 +311,7 @@ function FarmerPortal({
               <div className="directory-field">
                 <label htmlFor="india-centre">3. Mandi / procurement centre</label>
                 <select id="india-centre" value={selectedCentreId} disabled={centresForSelection.length === 0} onChange={(event) => setSelectedCentreId(event.target.value)}>
-                  {centresForSelection.length === 0 ? <option value="">No source-backed centre loaded for this district</option> : centresForSelection.map((centre) => <option key={centre.id} value={centre.id}>{centre.name}</option>)}
+                  {centresForSelection.length === 0 ? <option value="">No source-backed centre loaded for this district</option> : centresForSelection.map((centre) => <option key={centre.id} value={centre.id}>{centre.displayName ?? centre.name}</option>)}
                 </select>
               </div>
               <div className="directory-field">
@@ -295,20 +334,25 @@ function FarmerPortal({
 
             {selectedCentre ? (
               <div className="centre-source-card">
-                <div className="centre-source-heading"><strong>{selectedCentre.name}</strong><span className={selectedCentre.recordStatus === 'official-tender-reference' ? 'source-pill source-current' : 'source-pill'}>{statusText}</span></div>
+                <div className="centre-source-heading"><strong>{selectedCentre.displayName ?? selectedCentre.name}</strong><span className={selectedCentre.recordStatus === 'official-tender-reference' ? 'source-pill source-current' : 'source-pill'}>{statusText}</span></div>
                 <p>{selectedCentre.district}, {selectedCentre.state}{selectedCentre.pincode ? ` · PIN ${selectedCentre.pincode}` : ''}</p>
                 {selectedCentre.address && <p>{selectedCentre.address}</p>}
+                {selectedCentre.locationDetail && <p className="centre-agency">Location detail: {selectedCentre.locationDetail}</p>}
+                {selectedCentre.parentMarketCommittee && <p className="centre-agency">Parent market committee: {selectedCentre.parentMarketCommittee}</p>}
+                {selectedCentre.blockTehsil && <p className="centre-agency">Block / tehsil: {selectedCentre.blockTehsil}</p>}
                 <p className="centre-agency">Record type: {selectedCentre.centreType}</p>
                 <p className="centre-agency">Agency: {selectedCentre.agency ?? 'Not stated in source'}</p>
                 <p className="centre-agency">Source: {selectedCentre.sourceName} · {selectedCentre.sourceDate}</p>
                 {selectedCentre.commodity && <p className="centre-agency">Source commodity/season: {selectedCentre.commodity}</p>}
+                {selectedCentre.sourceQuality && <p className="centre-agency">Source quality: {selectedCentre.sourceQuality}</p>}
                 <p className="source-caveat">{selectedCentre.verificationNote}</p>
-                <a href={selectedCentre.sourceUrl} target="_blank" rel="noreferrer">View source record ↗</a>
+                {selectedCentre.sourceUrl ? <a href={selectedCentre.sourceUrl} target="_blank" rel="noreferrer">View source record ↗</a> : <p className="centre-agency">Direct source URL not available in the collected lead; independent verification required.</p>}
               </div>
             ) : (
               <div className="directory-empty"><strong>No source-backed centre record loaded for {selectedState} yet.</strong><p>We are expanding coverage state by state. We will not substitute an unverified mandi or invent an address, agency or crop eligibility.</p></div>
             )}
 
+            {directoryLoadState === 'error' && <p className="source-caveat">The supplemental directory could not load. The original 76 source-tracked records remain available.</p>}
             <div className="demo-notice"><strong>Demo mode only</strong><p>Choose a centre and date to continue. The next screen will show selectable illustrative time windows and a simulated confirmation. Nothing is sent to a government system.</p></div>
             <button className="button button-primary full-width" disabled={!selectedCentre || !visitDate} onClick={() => navigate('slots')}>Continue to slot preview <span>→</span></button>
             <p className="phone-legal">Real procurement bookings and live queue estimates remain disabled</p>
@@ -316,7 +360,7 @@ function FarmerPortal({
           <div className="phone-home-indicator" />
         </section>
         <div className="farmer-explainer">
-          <div className="explainer-card"><span className="explainer-number">01</span><div><h3>Choose your region</h3><p>The selector covers all Indian states and Union Territories. Source-backed physical centre records are added as they are verified.</p><span className="status-pill status-amber">{INDIA_CENTRES.length} records · {new Set(INDIA_CENTRES.map((centre) => centre.state)).size} states/UTs</span></div></div>
+          <div className="explainer-card"><span className="explainer-number">01</span><div><h3>Choose your region</h3><p>The selector covers all Indian states and Union Territories. Source-backed physical centre records are added as they are verified.</p><span className="status-pill status-amber">{directoryCount} listings & leads · {directoryStateCount} states/UTs · {directoryLoadState === 'ready' ? 'supplemental data loaded' : directoryLoadState === 'loading' ? 'loading supplemental data' : 'base directory only'}</span></div></div>
           <div className="explainer-card"><span className="explainer-number">02</span><div><h3>Check the source status</h3><p>Each centre carries its source, date and verification note. A market directory entry or tender reference is not proof of live operations.</p><span className="status-pill status-muted">Source tracked</span></div></div>
           <div className="explainer-card"><span className="explainer-number">03</span><div><h3>Preview a demonstration slot</h3><p>Choose a sample time window and confirm a local demo reservation. It will appear on the centre desk but will not be transmitted externally.</p><span className="status-pill status-muted">Simulated only</span></div></div>
           <div className="notice notice-green"><strong>Why no real booking?</strong><p>Centre authorization, active crop eligibility, current capacity, opening times and a live booking service have not been integrated. Aapurtikar keeps actual booking and live waiting-time APIs disabled.</p></div>
@@ -354,7 +398,7 @@ function SlotPreview({
           <div className="panel-heading"><div><p className="eyebrow">YOUR VISIT DETAILS</p><h2>Selected location</h2></div><span className="round-icon">02</span></div>
           {selectedCentre ? (
             <div className="visit-summary">
-              <div><small>CENTRE</small><strong>{selectedCentre.name}</strong><span>{selectedDistrict}, {selectedState}</span></div>
+              <div><small>CENTRE</small><strong>{selectedCentre.displayName ?? selectedCentre.name}</strong><span>{selectedDistrict}, {selectedState}</span></div>
               <div><small>COMMODITY</small><strong>{crop}</strong><span>Farmer-selected demo input; eligibility not verified</span></div>
               <div><small>PREFERRED DATE</small><strong>{formattedDate}</strong><span>Not sent to the centre</span></div>
             </div>
@@ -394,15 +438,15 @@ function SlotPreview({
   )
 }
 
-function CentreDesk({ navigate, demoBooking }: { navigate: (page: Page) => void; demoBooking: DemoBooking | null }) {
-  const demoCentre = demoBooking ? INDIA_CENTRES.find((centre) => centre.id === demoBooking.centreId) : undefined
+function CentreDesk({ navigate, demoBooking, centres }: { navigate: (page: Page) => void; demoBooking: DemoBooking | null; centres: CentreRecord[] }) {
+  const demoCentre = demoBooking ? centres.find((centre) => centre.id === demoBooking.centreId) : undefined
   return (
     <div className="page-content">
       <SectionHeading eyebrow="CENTRE DESK · SIMULATED WORKSPACE" title="Procurement centre desk" intro="This workspace shows how a centre team could review farmer appointments. Any reservation shown here was created in local demo mode, not received from a live procurement system." action={<span className="view-tag">LIVE OPERATIONS DISABLED</span>} />
       <div className="centre-dashboard">
         <aside className="admin-sidebar"><div className="admin-brand"><span>🌾</span><div><strong>Aapurtikar</strong><small>Centre management</small></div></div><div className="admin-nav-item active">▦ <span>Dashboard</span></div><div className="admin-nav-item">▣ <span>Demo reservations</span><em>Local only</em></div><div className="admin-nav-item">☷ <span>Queue & operations</span></div><div className="admin-nav-item">⌖ <span>Centres & capacity</span></div><div className="admin-nav-item">◷ <span>Scheduling policy</span></div><div className="admin-nav-item" onClick={() => navigate('analytics')}>▥ <span>Analytics & evaluation</span></div></aside>
         <div className="admin-main">
-          <div className="admin-topbar"><div><small>SELECTED DIRECTORY CENTRE</small><strong>{demoCentre?.name ?? 'No demo centre selected'}</strong></div><span className="status-pill status-amber">Source status varies · no live feed</span></div>
+          <div className="admin-topbar"><div><small>SELECTED DIRECTORY CENTRE</small><strong>{demoCentre?.displayName ?? demoCentre?.name ?? 'No demo centre selected'}</strong></div><span className="status-pill status-amber">Source status varies · no live feed</span></div>
           <div className="admin-welcome"><div><p className="eyebrow">CENTRE WORKSPACE PREVIEW</p><h2>Demo operations overview</h2><p>Use the Farmer portal to create a local demo reservation. It will appear here as a sample centre-side record.</p></div><div className="welcome-mark">🌱</div></div>
           <div className="admin-kpis">
             <KpiCard title="Demo reservations" value={demoBooking ? '1' : '0'} label="Local page-session record" tone="blue" />

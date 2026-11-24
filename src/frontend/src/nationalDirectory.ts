@@ -8,18 +8,25 @@
 export type CentreRecord = {
   id: string
   name: string
+  displayName?: string
   state: string
   district: string
   address?: string
   pincode?: string
   agency?: string
+  parentMarketCommittee?: string
+  blockTehsil?: string
+  locationDetail?: string
+  dataLayer?: 'official_inventory' | 'discovery_lead'
+  sourceQuality?: string
+  sourceRecordId?: string
   centreType: string
   commodity?: string
   season?: string
   sourceDate: string
   sourceName: string
-  sourceUrl: string
-  recordStatus: 'official-tender-reference' | 'official-directory-listing' | 'portal-listing'
+  sourceUrl?: string
+  recordStatus: 'official-tender-reference' | 'official-directory-listing' | 'portal-listing' | 'discovery-lead'
   verificationNote: string
 }
 

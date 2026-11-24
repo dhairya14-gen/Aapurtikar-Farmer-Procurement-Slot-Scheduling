@@ -30,7 +30,7 @@ export async function getApi<T>(path: string, signal?: AbortSignal): Promise<Loa
       try {
         body = JSON.parse(raw)
       } catch {
-        throw new Error(`API returned an unreadable response (${response.status}). Check that the Aapurtikar backend is running on port 8000.`)
+        throw new Error(`API returned an unreadable response (${response.status}). Check that the Aapurtikar backend is running on port 8001.`)
       }
     } else if (response.ok) {
       throw new Error('API returned an empty response. Check the backend route and server logs.')
@@ -45,7 +45,7 @@ export async function getApi<T>(path: string, signal?: AbortSignal): Promise<Loa
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
     const message = error instanceof TypeError
-      ? 'Cannot reach the Aapurtikar API. Start the backend at http://127.0.0.1:8000.'
+      ? 'Cannot reach the Aapurtikar API. Start the backend at http://127.0.0.1:8001.'
       : error instanceof Error
         ? error.message
         : 'Unable to load API status.'
