@@ -2,10 +2,11 @@
 
 **Problem ID:** SIH26032
 **Course / Section / Group:** CSE276 / K3P25LH / G24
-**Location:** Kapurthala district, Punjab, India
-**Status:** Academic prototype foundation. No procurement centre is configured or active.
+**Initial research benchmark:** Punjab, India
+**Application scope:** India-wide directory architecture; source-backed seed coverage is partial
+**Status:** Academic prototype. No procurement centre is connected for live operations.
 
-This repository contains the Aapurtikar React/TypeScript website, a FastAPI status API, scheduling/evaluation services, and an optional local PostgreSQL foundation. The website includes an overview, mobile-first farmer portal preview, slot-selection preview, centre operations desk, and analytics. CMS Kapurthala, New Dana Mandi is only a proposed candidate. Its paddy/wheat eligibility, operating hours, capacity, exact location, and participation have not been verified. Bookings, slot publication, live queue and live wait estimates remain intentionally disabled. No real farmer, booking, queue, or operational records are included.
+This repository contains the Aapurtikar React/TypeScript website, a FastAPI status API, scheduling/evaluation services, and an optional local PostgreSQL foundation. The farmer portal has a national State/UT selector, district and market/centre selection, crop/date inputs, and a slot preview that carries the selections forward. The seed directory currently contains 76 named e-NAM APMC/mandi and government procurement-centre references across 20 States/UTs; these entity types and their source/verification statuses are kept separate. This is a partial directory, not complete national coverage. A selectable sample time window can create a local-only demo reservation that appears on the centre desk. It is not sent to an API or stored in the backend. Real bookings, published slots, live queue and live wait estimates remain intentionally disabled. No real farmer, booking, queue, or operational records are included.
 
 ## Mandatory CA-1 objectives
 
@@ -16,7 +17,7 @@ This repository contains the Aapurtikar React/TypeScript website, a FastAPI stat
 **Mandatory baseline:** unmanaged first-come-first-served (FCFS).
 **Required deliverable:** slot booking interface with live wait estimate.
 
-These are target requirements, not all achieved operational outcomes. The website is an academic prototype: booking and live wait estimates are disabled, and the slot page is a visual preview only. Analytics separates (a) historical Indian mandi demand data replayed through a synthetic farmer-level queue simulation and (b) real-centre operational evidence, which remains unavailable. The modelled reductions are not measured field improvements. Do not enable booking or present live estimates until an authorized centre configuration and sufficient genuine operational observations exist. See [requirements and evaluation plan](docs/requirements_and_evaluation.md), the [scheduling methodology](docs/scheduling_methodology.md), the [India mandi benchmark provenance](docs/india_mandi_benchmark_provenance.md), and the [CA-1 compliance checklist](report/university_compliance_checklist.md).
+These are target requirements, not all achieved operational outcomes. The website is an academic prototype: the farmer can complete a local-only simulated reservation for demonstration, while real booking and live wait estimates remain disabled. The national market directory is source-tracked but not complete. Analytics separates (a) historical Indian mandi demand data replayed through a synthetic farmer-level queue simulation and (b) real-centre operational evidence, which remains unavailable. The modelled reductions are not measured field improvements. Do not enable booking or present live estimates until an authorized centre configuration and sufficient genuine operational observations exist. See [requirements and evaluation plan](docs/requirements_and_evaluation.md), the [scheduling methodology](docs/scheduling_methodology.md), the [India mandi benchmark provenance](docs/india_mandi_benchmark_provenance.md), and the [CA-1 compliance checklist](report/university_compliance_checklist.md).
 
 The supplied CA-1 format requires Chapters 1–9 in the listed order, IEEE numbered citations, a 12–20 page report from Chapter 1 through References, and an 8–10 slide presentation targeting approximately 8 minutes plus questions. The compliance checklist maps these requirements to planned artifacts. The AI-use declaration and Appendix A contributions/signatures must use truthful student-supplied information.
 
@@ -98,12 +99,12 @@ Backend tests exercise API handler contracts, scheduling/evaluation logic and sc
 ### Website pages
 
 - `/#home` — Aapurtikar overview, source-data profile and workflow map
-- `/#farmer` — mobile-first farmer visit-planning preview; crop selection is a local UI demonstration only
-- `/#slots` — slot-selection preview with no published capacity and disabled confirmation
-- `/#staff` — centre operations desk with empty live queue, booking and waiting-time states
+- `/#farmer` — India-wide State/UT → district → source-listed mandi/centre selection, commodity and date inputs
+- `/#slots` — carries the farmer selections forward; sample time windows can be selected and a local demo reservation can be confirmed
+- `/#staff` — centre desk shows the local demo reservation separately from unavailable live check-ins, queue and waiting-time states
 - `/#analytics` — separate tabs for offline simulation results and unavailable real-centre operational evidence
 
-Use the navigation at the top of the page to move between views. API status is informational and does not enable any operational action. The research benchmark is embedded as aggregate static output in `src/frontend/src/researchData.ts`, so it remains visible even if the local API is temporarily offline.
+Use the navigation at the top of the page to move between views. API status is informational and does not enable any operational action. Demo reservations exist only in frontend page-session state and disappear on refresh; they do not call the booking API. The research benchmark is embedded as aggregate static output in `src/frontend/src/researchData.ts`, so it remains visible even if the local API is temporarily offline. The source-tracked market/centre seed is in `src/frontend/src/nationalDirectory.ts` and `data/india/centre-directory-seed.csv`; read [the national directory sourcing notes](docs/india-directory-sourcing.md) before describing any listing as an active procurement centre.
 
 
 ## Indian mandi data and synthetic queue benchmark
@@ -176,7 +177,7 @@ Never commit `.env`, database files, or local raw/processed operational data. `.
 ## Project structure
 
 ```text
-data/                 Raw/processed folders are protected; metadata and compact benchmark aggregates
+data/                 Raw/processed folders are protected; metadata, benchmark aggregates and India directory seed
 docs/                 Architecture notes
 notebooks/            EDA outline only; no observations or charts
 src/backend/app/      FastAPI status API, models, pure scheduling services and evaluation CLI
